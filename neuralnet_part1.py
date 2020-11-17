@@ -133,7 +133,6 @@ def fit(train_set,train_labels,dev_set,n_iter,batch_size=100):
                 bestGuesses[i] = 0
             else:
                 bestGuesses[i] = 1
-    bestGuesses = np.array(bestGuesses)
 
 
     #print(bestGuesses)
