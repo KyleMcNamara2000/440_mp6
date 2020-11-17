@@ -117,27 +117,22 @@ def fit(train_set,train_labels,dev_set,n_iter,batch_size=100):
 
             # print statistics
             running_loss += loss.item()
-            '''
-            if i % 40 == 1:  # print every 2000 mini-batches
-                print('[%d, %5d] loss: %.3f' %
-                      (epoch + 1, i + 1, running_loss / 2000))
-                running_loss = 0.0
-            '''
+
         losses.append(running_loss)
-    print('Finished Training')
     guesses = net(dev_set)
-    bestGuesses = []
-    for x in guesses:
+    bestGuesses = np.empty(len(guesses))
+    for i in range(len(guesses)):
+        x = guesses[i]
         if x[0] > x[1]:
             if x[0] < 0.5:
-                bestGuesses.append(0)
+                bestGuesses[i] = 0
             else:
-                bestGuesses.append(1)
+                bestGuesses[i] = 1
         else:
             if x[1] < 0.5:
-                bestGuesses.append(0)
+                bestGuesses[i] = 0
             else:
-                bestGuesses.append(1)
+                bestGuesses[i] = 1
     bestGuesses = np.array(bestGuesses)
 
 
