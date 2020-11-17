@@ -14,10 +14,12 @@ files and classes when code is run, so be careful to not modify anything else.
 
 import numpy as np
 import torch
+import torch.nn as nn
+import torch.nn.functional as F
 
 
 class NeuralNet(torch.nn.Module):
-    def __init__(self, lrate,loss_fn,in_size,out_size):
+    def __init__(self, lrate, loss_fn, in_size, out_size):
         """
         Initialize the layers of your neural network
 
@@ -37,7 +39,9 @@ class NeuralNet(torch.nn.Module):
         """
         super(NeuralNet, self).__init__()
         self.loss_fn = loss_fn
-
+        self.fc1 = nn.Linear(in_size, 32)
+        self.fc2 = nn.Linear(32, out_size)
+        self.optimizer = torch.optim.SGD(self.parameters(), lr=lrate)
 
 
 
@@ -48,7 +52,15 @@ class NeuralNet(torch.nn.Module):
 
         @return y: an (N, out_size) torch tensor of output from the network
         """
-        return torch.ones(x.shape[0], 1)
+        #normalize
+        m = torch.mean(x) #TODO: add dimension?
+        std = torch.std(x)
+        x = (x - m) / std #TODO: fix x to be normalized
+        #pass into relu(fc1(x))
+        x = F.relu(self.fc1(x))
+        #output of that -> fc2
+        x = self.fc2(x)
+        return x
 
     def step(self, x,y):
         """
@@ -57,7 +69,13 @@ class NeuralNet(torch.nn.Module):
         @param y: an (N,) torch tensor
         @return L: total empirical risk (mean of losses) at this time step as a float
         """
-        return 0.0
+        #run forward on batch
+        out = self.forward(x)
+        #calculate loss
+        L = self.loss_fn(out, y)
+        #optimize it
+        self.optimizer.step()
+        return L
 
 
 def fit(train_set,train_labels,dev_set,n_iter,batch_size=100):
@@ -78,4 +96,50 @@ def fit(train_set,train_labels,dev_set,n_iter,batch_size=100):
 
     # NOTE: This must work for arbitrary M and N
     """
-    return [],[],None
+    loss_fn = nn.CrossEntropyLoss()
+    net = NeuralNet(0.01, loss_fn, len(train_set[0]), 2)
+    losses = []
+    for epoch in range(n_iter):  # loop over the dataset multiple times
+
+        running_loss = 0.0
+        for i in range(int(len(train_set) / batch_size) - 1):
+            labels = train_labels[batch_size * i : batch_size * (i + 1)]
+            inputs = train_set[batch_size * i : batch_size * (i + 1)]
+
+            # zero the parameter gradients
+            net.optimizer.zero_grad()
+
+            # forward + backward + optimize
+            outputs = net(inputs)
+            loss = net.loss_fn(outputs, labels)
+            loss.backward()
+            net.optimizer.step()
+
+            # print statistics
+            running_loss += loss.item()
+            '''
+            if i % 40 == 1:  # print every 2000 mini-batches
+                print('[%d, %5d] loss: %.3f' %
+                      (epoch + 1, i + 1, running_loss / 2000))
+                running_loss = 0.0
+            '''
+        losses.append(running_loss)
+    print('Finished Training')
+    guesses = net(dev_set)
+    bestGuesses = []
+    for x in guesses:
+        if x[0] > x[1]:
+            if x[0] < 0.5:
+                bestGuesses.append(0)
+            else:
+                bestGuesses.append(1)
+        else:
+            if x[1] < 0.5:
+                bestGuesses.append(0)
+            else:
+                bestGuesses.append(1)
+    bestGuesses = np.array(bestGuesses)
+
+
+    #print(bestGuesses)
+    return losses, bestGuesses, net
