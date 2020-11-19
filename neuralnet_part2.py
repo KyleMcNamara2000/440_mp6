@@ -8,16 +8,18 @@
 # Created by Justin Lizama (jlizama2@illinois.edu) on 10/29/2019
 """
 This is the main entry point for MP6. You should only modify code
-within this file and neuralnet_part1 -- the unrevised staff files will be used for all other
+within this file and neuralnet_part2 -- the unrevised staff files will be used for all other
 files and classes when code is run, so be careful to not modify anything else.
 """
 
 import numpy as np
 import torch
+import torch.nn as nn
+import torch.nn.functional as F
 
 
 class NeuralNet(torch.nn.Module):
-    def __init__(self, lrate,loss_fn,in_size,out_size):
+    def __init__(self, lrate, loss_fn, in_size, out_size):
         """
         Initialize the layers of your neural network
 
@@ -29,12 +31,18 @@ class NeuralNet(torch.nn.Module):
         @param in_size: Dimension of input
         @param out_size: Dimension of output
 
+        For Part 1 the network should have the following architecture (in terms of hidden units):
 
-
+        in_size -> 32 ->  out_size
+        We recommend setting the lrate to 0.01 for part 1
 
         """
         super(NeuralNet, self).__init__()
         self.loss_fn = loss_fn
+        self.fc1 = nn.Linear(in_size, 32)
+        self.fc2 = nn.Linear(32, out_size)
+        self.optimizer = torch.optim.SGD(self.parameters(), lr=lrate)
+
 
 
     def forward(self, x):
@@ -44,7 +52,15 @@ class NeuralNet(torch.nn.Module):
 
         @return y: an (N, out_size) torch tensor of output from the network
         """
-        return torch.ones(x.shape[0], 1)
+        #normalize
+        m = torch.mean(x) #TODO: add dimension?
+        std = torch.std(x)
+        x = (x - m) / std #TODO: fix x to be normalized
+        #pass into relu(fc1(x))
+        x = F.relu(self.fc1(x))
+        #output of that -> fc2
+        x = self.fc2(x)
+        return x
 
     def step(self, x,y):
         """
@@ -53,8 +69,13 @@ class NeuralNet(torch.nn.Module):
         @param y: an (N,) torch tensor
         @return L: total empirical risk (mean of losses) at this time step as a float
         """
-        return 0.0
-
+        #run forward on batch
+        out = self.forward(x)
+        #calculate loss
+        L = self.loss_fn(out, y)
+        #optimize it
+        self.optimizer.step()
+        return L
 
 
 def fit(train_set,train_labels,dev_set,n_iter,batch_size=100):
@@ -74,8 +95,45 @@ def fit(train_set,train_labels,dev_set,n_iter,batch_size=100):
     @return net: A NeuralNet object
 
     # NOTE: This must work for arbitrary M and N
-
-    model's performance could be sensitive to the choice of learning_rate. We recommend trying different values in case
-    your first choice does not seem to work well.
     """
-    return [],[],None
+    loss_fn = nn.CrossEntropyLoss()
+    net = NeuralNet(0.01, loss_fn, len(train_set[0]), 2)
+    losses = []
+    for epoch in range(n_iter):  # loop over the dataset multiple times
+
+        running_loss = 0.0
+        for i in range(int(len(train_set) / batch_size) - 1):
+            labels = train_labels[batch_size * i : batch_size * (i + 1)]
+            inputs = train_set[batch_size * i : batch_size * (i + 1)]
+
+            # zero the parameter gradients
+            net.optimizer.zero_grad()
+
+            # forward + backward + optimize
+            outputs = net(inputs)
+            loss = net.loss_fn(outputs, labels)
+            loss.backward()
+            net.optimizer.step()
+
+            # print statistics
+            running_loss += loss.item()
+
+        losses.append(running_loss)
+    guesses = net(dev_set)
+    bestGuesses = np.empty(len(guesses))
+    for i in range(len(guesses)):
+        x = guesses[i]
+        if x[0] > x[1]:
+            if x[0] < 0.5:
+                bestGuesses[i] = 0
+            else:
+                bestGuesses[i] = 1
+        else:
+            if x[1] < 0.5:
+                bestGuesses[i] = 0
+            else:
+                bestGuesses[i] = 1
+
+
+    #print(bestGuesses)
+    return losses, bestGuesses, net
