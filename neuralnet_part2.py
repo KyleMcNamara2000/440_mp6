@@ -40,7 +40,8 @@ class NeuralNet(torch.nn.Module):
         super(NeuralNet, self).__init__()
         self.loss_fn = loss_fn
         self.fc1 = nn.Linear(in_size, 32)
-        self.fc2 = nn.Linear(32, out_size)
+        self.fc2 = nn.Linear(32, 16)
+        self.fc3 = nn.Linear(16, out_size)
         self.optimizer = torch.optim.SGD(self.parameters(), lr=lrate)
 
 
@@ -58,8 +59,9 @@ class NeuralNet(torch.nn.Module):
         x = (x - m) / std #TODO: fix x to be normalized
         #pass into relu(fc1(x))
         x = F.relu(self.fc1(x))
+        x = F.relu(self.fc2(x))
         #output of that -> fc2
-        x = self.fc2(x)
+        x = self.fc3(x)
         return x
 
     def step(self, x,y):
