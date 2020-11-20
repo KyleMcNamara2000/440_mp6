@@ -39,9 +39,10 @@ class NeuralNet(torch.nn.Module):
         """
         super(NeuralNet, self).__init__()
         self.loss_fn = loss_fn
+        #self.conv1 = nn.Conv2d(3, 4, 4)
         self.fc1 = nn.Linear(in_size, 32)
-        self.fc2 = nn.Linear(32, 16)
-        self.fc3 = nn.Linear(16, out_size)
+        self.fc2 = nn.Linear(32, 64)
+        self.fc3 = nn.Linear(64, out_size)
         self.optimizer = torch.optim.SGD(self.parameters(), lr=lrate)
 
 
@@ -57,6 +58,8 @@ class NeuralNet(torch.nn.Module):
         m = torch.mean(x) #TODO: add dimension?
         std = torch.std(x)
         x = (x - m) / std #TODO: fix x to be normalized
+        #x = F.relu(self.conv1(x))
+        #x = x.view(-1, 4)
         #pass into relu(fc1(x))
         x = F.relu(self.fc1(x))
         x = F.relu(self.fc2(x))
