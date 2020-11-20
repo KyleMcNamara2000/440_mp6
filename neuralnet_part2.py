@@ -38,12 +38,14 @@ class NeuralNet(torch.nn.Module):
 
         """
         super(NeuralNet, self).__init__()
-        self.in_size = 3363
+        self.in_size = 16*14*14 - 1
         self.loss_fn = loss_fn
-        self.conv1 = nn.Conv2d(3, 4, 4)
-        self.fc1 = nn.Linear(3364, 32)
-        self.fc2 = nn.Linear(32, 16)
-        self.fc3 = nn.Linear(16, out_size)
+        self.conv1 = nn.Conv2d(3, 16, 4)
+        self.pool = nn.MaxPool2d(2, 2)
+        self.fc1 = nn.Linear(16*14*14, 32)
+        self.fc2 = nn.Linear(32, 24)
+        self.fc3 = nn.Linear(24, 16)
+        self.fc4 = nn.Linear(16, out_size)
         self.optimizer = torch.optim.SGD(self.parameters(), lr=lrate)
 
 
@@ -61,17 +63,19 @@ class NeuralNet(torch.nn.Module):
         x = (x - m) / std #TODO: fix x to be normalized
         #x = torch.reshape(x, (-1, 3, 32, 32))
         x = x.view(-1, 3, 32, 32)
-        x = F.relu(self.conv1(x))
-        #print("hiiiiiiiiiiiii")
+        x = self.pool(F.relu(self.conv1(x)))
+        #print(x.shape)
         #x = torch.reshape(x, (-1, 3364))
-        x = x.view(-1, 3364)
+        x = x.view(-1, 16*14*14)
+        #print("hi")
         #print("ho")
         #pass into relu(fc1(x))
         x = F.relu(self.fc1(x))
         #print("jo")
         x = F.relu(self.fc2(x))
+        x = F.relu(self.fc3(x))
         #output of that -> fc2
-        x = self.fc3(x)
+        x = self.fc4(x)
         return x
 
     def step(self, x,y):
