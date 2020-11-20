@@ -38,11 +38,12 @@ class NeuralNet(torch.nn.Module):
 
         """
         super(NeuralNet, self).__init__()
+        self.in_size = 3363
         self.loss_fn = loss_fn
-        #self.conv1 = nn.Conv2d(3, 4, 4)
-        self.fc1 = nn.Linear(in_size, 32)
-        self.fc2 = nn.Linear(32, 64)
-        self.fc3 = nn.Linear(64, out_size)
+        self.conv1 = nn.Conv2d(3, 4, 4)
+        self.fc1 = nn.Linear(3364, 32)
+        self.fc2 = nn.Linear(32, 16)
+        self.fc3 = nn.Linear(16, out_size)
         self.optimizer = torch.optim.SGD(self.parameters(), lr=lrate)
 
 
@@ -58,10 +59,16 @@ class NeuralNet(torch.nn.Module):
         m = torch.mean(x) #TODO: add dimension?
         std = torch.std(x)
         x = (x - m) / std #TODO: fix x to be normalized
-        #x = F.relu(self.conv1(x))
-        #x = x.view(-1, 4)
+        #x = torch.reshape(x, (-1, 3, 32, 32))
+        x = x.view(-1, 3, 32, 32)
+        x = F.relu(self.conv1(x))
+        #print("hiiiiiiiiiiiii")
+        #x = torch.reshape(x, (-1, 3364))
+        x = x.view(-1, 3364)
+        #print("ho")
         #pass into relu(fc1(x))
         x = F.relu(self.fc1(x))
+        #print("jo")
         x = F.relu(self.fc2(x))
         #output of that -> fc2
         x = self.fc3(x)
