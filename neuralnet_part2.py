@@ -43,9 +43,9 @@ class NeuralNet(torch.nn.Module):
         self.conv1 = nn.Conv2d(3, 16, 4)
         self.pool = nn.MaxPool2d(2, 2)
         self.fc1 = nn.Linear(16*14*14, 32)
-        self.fc2 = nn.Linear(32, 24)
-        self.fc3 = nn.Linear(24, 16)
-        self.fc4 = nn.Linear(16, out_size)
+        self.fc2 = nn.Linear(32, 16)
+        #self.fc3 = nn.Linear(24, 16)
+        self.fc3 = nn.Linear(16, out_size)
         self.optimizer = torch.optim.SGD(self.parameters(), lr=lrate)
 
 
@@ -73,9 +73,9 @@ class NeuralNet(torch.nn.Module):
         x = F.relu(self.fc1(x))
         #print("jo")
         x = F.relu(self.fc2(x))
-        x = F.relu(self.fc3(x))
+        #x = F.relu(self.fc3(x))
         #output of that -> fc2
-        x = self.fc4(x)
+        x = self.fc3(x)
         return x
 
     def step(self, x,y):
@@ -115,41 +115,30 @@ def fit(train_set,train_labels,dev_set,n_iter,batch_size=100):
     loss_fn = nn.CrossEntropyLoss()
     net = NeuralNet(0.01, loss_fn, len(train_set[0]), 2)
     losses = []
+    i = 0
     for epoch in range(n_iter):  # loop over the dataset multiple times
 
         running_loss = 0.0
-        for i in range(int(len(train_set) / batch_size) - 1):
-            labels = train_labels[batch_size * i : batch_size * (i + 1)]
-            inputs = train_set[batch_size * i : batch_size * (i + 1)]
+        labels = train_labels[batch_size * i : batch_size * (i + 1)]
+        inputs = train_set[batch_size * i : batch_size * (i + 1)]
 
-            # zero the parameter gradients
-            net.optimizer.zero_grad()
+        # zero the parameter gradients
+        net.optimizer.zero_grad()
 
-            # forward + backward + optimize
-            outputs = net(inputs)
-            loss = net.loss_fn(outputs, labels)
-            loss.backward()
-            net.optimizer.step()
+        # forward + backward + optimize
+        outputs = net(inputs)
+        loss = net.loss_fn(outputs, labels)
+        loss.backward()
+        net.optimizer.step()
 
-            # print statistics
-            running_loss += loss.item()
+        # print statistics
+        running_loss += loss.item()
 
         losses.append(running_loss)
+        i = (i + 1) % (int(len(train_set) / batch_size))
     guesses = net(dev_set)
-    bestGuesses = np.empty(len(guesses))
-    for i in range(len(guesses)):
-        x = guesses[i]
-        if x[0] > x[1]:
-            if x[0] < 0.5:
-                bestGuesses[i] = 0
-            else:
-                bestGuesses[i] = 1
-        else:
-            if x[1] < 0.5:
-                bestGuesses[i] = 0
-            else:
-                bestGuesses[i] = 1
+    bestGuesses = torch.argmax(guesses, 1)
 
 
     #print(bestGuesses)
-    return losses, bestGuesses, net
+    return losses, bestGuesses.numpy(), net
